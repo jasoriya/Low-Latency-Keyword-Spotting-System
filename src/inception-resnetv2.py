@@ -4,7 +4,10 @@ Created on Sat Apr 21 02:00:58 2018
 
 @author: Shreyans
 """
-
+from numpy.random import seed
+seed(1)
+from tensorflow import set_random_seed
+set_random_seed(2)
 import os
 import sys
 #os.environ["CUDA_VISIBLE_DEVICES"]="-1"
@@ -221,22 +224,22 @@ test_labels  = pd.DataFrame(trueTestLabels.fileName)
 train_labels, val_labels = train_test_split(labels_df, train_size = 0.8, random_state=42)
 train_filenames, val_filenames = train_test_split(filenames, train_size = 0.8, random_state=42)
 
-img_resize = (139, 139) # The resize size of each image ex: (64, 64) or None to use the default image size
+img_resize = (299, 299) # The resize size of each image ex: (64, 64) or None to use the default image size
 
 
-model = create_model(img_dim=(139, 139, 3))
+model = create_model(img_dim=(299, 299, 3))
 model.summary()
 
 history = History()
 
 callbacks = [history, 
-             EarlyStopping(monitor='val_loss', patience=5, verbose=1, min_delta=1e-4),
-             ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=1, cooldown=0, min_lr=1e-7, verbose=1),
-             ModelCheckpoint(filepath='../weights/weights_299_ir.best.hdf5', 
+             EarlyStopping(monitor='val_acc', patience=5, verbose=1, min_delta=1e-4),
+             ReduceLROnPlateau(monitor='val_acc', factor=0.1, patience=1, cooldown=0, min_lr=1e-7, verbose=1),
+             ModelCheckpoint(filepath='weights/model_299_ir_binary.best.hdf5', 
              monitor='val_acc', verbose=1, 
              save_best_only=True, save_weights_only=True, mode='auto')]
 
-batch_size = 6
+batch_size = 16
 train_generator = get_train_generator(batch_size, train_filenames, train_labels, train_jpeg_dir)
 val_generator = get_validation_generator(batch_size, val_filenames, val_labels, train_jpeg_dir)
 steps = len(train_filenames) / batch_size
@@ -246,39 +249,15 @@ val_steps = len(val_filenames) / batch_size
 
 opt = Adam(lr=1e-4)
 #opt = SGD(lr=0.001, momentum=0.9, decay=1e-6,nesterov=True)
-model.compile(optimizer=opt, loss='binary_crossentropy', metrics = ['accuracy'])
+model.compile(optimizer=opt, loss='binary_crossentropy', metrics = ['categorical_accuracy'])
 
 history = model.fit_generator(train_generator, steps, epochs=20, verbose=1, validation_data=val_generator, validation_steps = val_steps, callbacks=callbacks)
 
-#model.load_weights('../weights/weights_299_ir.best.hdf5')
+model.load_weights('weights/model_3_epoch.hdf5')
 
 pred_generator = get_prediction_generator(batch_size, test_labels.fileName, test_jpeg_dir)
 
 predictions_labels = model.predict_generator(generator=pred_generator, verbose=1, steps = len(test_labels) / batch_size)
 
-yPred2 = np.zeros_like(predictions_labels)
-yPred2[np.arange(len(predictions_labels)), predictions_labels.argmax(1)] = 1
-
 yPred = np.round(predictions_labels)
-pred_df = pd.DataFrame(yPred, columns=list(train_labels.columns))
-pred_df = pred_df.astype(int)
-
-pred_df = pred_df.replace(0, pred_df.replace([0], [None]))
-index = pred_df.index[pred_df.isnull().all(1)]
-
-
-pred_df.insert(0, "fileName", test_labels.fileName)
-pred_df.drop(index, inplace=True)
-pred_df.fillna(0, inplace=True)
-
-trueTestLabels.drop(index, inplace=True)
-
-
-pred_df.to_csv("predictions_inception_resnet_299_56.csv", index = False)
-
-
-yPred = np.zeros_like(pred_df.values)
-yPred = [np.where(r==1)[0][0] for r in pred_df.values]
-
-yTrue = trueTestLabels.values
-yTrue = [np.where(r==1)[0][0] for r in yTrue]
+print("The accuracy is: ", accuracy_score(trueTestLabels.iloc[:, 1:].values, yPred))
