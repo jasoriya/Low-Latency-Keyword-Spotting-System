@@ -5,12 +5,12 @@ NLP Project for CS6120 at Northeastern University
 (You will need to login to Google to be able to download it)
 
 ##### The structure of the project folders should be:
--Low-Latency-Keyword-Spotting-System
- -src
-  -data_speech_commands_v0.02	(The extracted dataset folder)
-  -input
-  -weights
-  -picts
+- Low-Latency-Keyword-Spotting-System
+  - src
+    - data_speech_commands_v0.02	(The extracted dataset folder)
+    - input
+    - weights
+    - picts
 
 After you have made this structure, begin by preprocessing the dataset.
 
