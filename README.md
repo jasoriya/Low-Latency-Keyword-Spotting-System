@@ -4,7 +4,7 @@ NLP Project for CS6120 at Northeastern University
 ## Dataset download from [Tensorflow](https://storage.cloud.google.com/download.tensorflow.org/data/speech_commands_v0.02.tar.gz)
 (You will need to login to Google to be able to download it)
 
-###### The structure of the project folders should be:
+##### The structure of the project folders should be:
 -Low-Latency-Keyword-Spotting-System
 	-src
 		-data_speech_commands_v0.02	(The extracted dataset folder)
