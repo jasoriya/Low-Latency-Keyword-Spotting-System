@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Mar 14 12:53:46 2019
+Created on Wed Apr 10 17:26:29 2019
 
-@author: ritikagupta
+@author: shreyans
 """
 
 import matplotlib.pyplot as plt
@@ -12,6 +11,9 @@ from scipy.io import wavfile
 import pandas as pd
 import os
 import numpy as np
+import librosa
+import librosa.display
+from python_speech_features import logfbank
 
 testData = pd.read_csv('data_speech_commands_v0.02/testing_list.txt', sep="/", header=None)
 testData.columns = ["label", "fileName"]  
@@ -59,68 +61,50 @@ for x in os.listdir(audio_path):
 train_audio_path = (audio_path  + "/"+trainData['label']+"/" + trainData['fileName'])
 test_audio_path = (audio_path  + "/"+testData['label']+"/" + testData['fileName'])
 
+def dict_to_array(mydict, extract):
+    valList = []
+    if extract =='k':
+        for value in mydict.keys():
+            valList.append(value)
+    elif extract=='v':
+        for value in mydict.values():
+            valList.append(value)
+    return np.array(valList)
 
-def log_specgram(audio, sample_rate, window_size=20,
-                 step_size=10, eps=1e-10):
-    nperseg = int(round(window_size * sample_rate / 1e3))
-    noverlap = int(round(step_size * sample_rate / 1e3))
-    freqs, _, spec = signal.spectrogram(audio,
-                                    fs=sample_rate,
-                                    window='hann',
-                                    nperseg=nperseg,
-                                    noverlap=noverlap,
-                                    detrend=False)
-    return freqs, np.log(spec.T.astype(np.float32) + eps)
-
-
-def wav2img(wav_path, targetdir='', figsize=(4,4)):
-    """
-    takes in wave file path
-    and the fig size. Default 4,4 will make images 288 x 288
-    """
-
-    #fig = plt.figure(figsize=figsize)    
-    # use soundfile library to read in the wave files
-    samplerate, test_sound  = wavfile.read(wav_path)
-    _, spectrogram = log_specgram(test_sound, samplerate)
+def wav2logmel(file, max_pad_len=32):
+    wave, sr = librosa.load(file, mono=True, sr=None)
+    wave = wave[::3]
+    fbank_feat = logfbank(wave, 16000)
+    pad_width = max_pad_len - fbank_feat.shape[0]
+    if pad_width < 0:
+        fbank_feat = fbank_feat[:max_pad_len]
+    else:
+        fbank_feat = np.pad(fbank_feat, pad_width=((0, pad_width), (0, 0)), mode='constant')
+    return fbank_feat
     
-    ## create output path
-    output_file = wav_path.split('/')[-1].split('.wav')[0]
-    output_file = targetdir +'/'+ output_file
-    #plt.imshow(spectrogram.T, aspect='auto', origin='lower')
-    plt.imsave('%s.png' % output_file, spectrogram)
-    plt.close()
 
+logmelTrain = dict()
 
-# WAVEFORM
-#def wav2img_waveform(wav_path, targetdir='', figsize=(4,4)):
-#    samplerate,test_sound  = wavfile.read(sample_audio[0])
-#    fig = plt.figure(figsize=figsize)
-#    plt.plot(test_sound)
-#    plt.axis('off')
-#    output_file = wav_path.split('/')[-1].split('.wav')[0]
-#    output_file = targetdir +'/'+ output_file
-#    plt.savefig('%s.png' % output_file)
-#    plt.close()
-
-        
 for i, x in enumerate(subFolderList):
     print(i, ':', x)
     temp=trainData.loc[trainData['label']==x]
     all_files=(audio_path  + "/"+temp['label']+"/" + temp['fileName'])
     for file in all_files:
-        wav2img(file, pict_Path + x)
+        logmelF = wav2logmel(file, max_pad_len=32)
+        logmelTrain[file] = logmelF
 
-
+logmelTest = dict()
 
 for i, x in enumerate(subFolderList):
     print(i, ':', x)
     temp=testData.loc[testData['label']==x]
     all_files=(audio_path  + "/"+temp['label']+"/" + temp['fileName'])
     for file in all_files:
-        wav2img(file, test_pict_Path + x)
-        
+        mfccF = wav2logmel(file, max_pad_len=32)
+        logmelTest[file] = mfccF
+    
 
+#Train Labels
 labelList = ['yes', 'no', 'up', 'down', 'left', 'right', 'on', 'off', 'stop', 'go', '_background_noise_']
 trainData['new_labels'] = trainData['label'].apply(lambda x: 'unknown' if x not in labelList else x)
 testData['new_labels'] = testData['label'].apply(lambda x: 'unknown' if x not in labelList else x)
@@ -131,11 +115,27 @@ testData['fileName'] = testData.apply(lambda x: x['label'] + '/'+ x['fileName'],
 
 labelsTrain = pd.concat([trainData,pd.get_dummies(trainData['new_labels'])],axis=1)
 labelsTrain.drop(['label', 'new_labels'],axis = 1, inplace = True)
-labelsTrain['fileName'] = labelsTrain['fileName'].apply(lambda x: x.replace('.wav', '.png', 1))
-labelsTrain.to_csv('input/picts/labelsTrain.csv', index=False)
+labelsTrain.sort_values(['fileName'], inplace=True)
+labelsTrain.reset_index(drop=True, inplace=True)
+
+logmelTrainDF = pd.DataFrame(list(logmelTrain.items()), columns=['fileName', 'values'])
+logmelTrainDF.sort_values(['fileName'], inplace=True)
+logmelTrainDF.reset_index(drop=True, inplace=True)
+labelsTrain['fileName'] = logmelTrainDF['fileName']
+labelsTrain.to_csv('input/logmel_labelsTrain.csv', index=False)
+np.save("input/logmelTrainFeatures.npy", np.array(logmelTrainDF['values'].tolist()))
+
+#Test Labels
 
 labelsTest = pd.concat([testData,pd.get_dummies(testData['new_labels'])],axis=1)
 labelsTest.drop(['label', 'new_labels'],axis = 1, inplace = True)
-labelsTest['fileName'] = labelsTest['fileName'].apply(lambda x: x.replace('.wav', '.png', 1))
 labelsTest.insert(1, '_background_noise_', 0)
-labelsTest.to_csv('input/picts/labelsTest.csv', index=False)
+labelsTest.sort_values(['fileName'], inplace=True)
+labelsTest.reset_index(drop=True, inplace=True)
+
+logmelTestDF = pd.DataFrame(list(logmelTest.items()), columns=['fileName', 'values'])
+logmelTestDF.sort_values(['fileName'], inplace=True)
+logmelTestDF.reset_index(drop=True, inplace=True)
+labelsTest['fileName'] = logmelTestDF['fileName']
+labelsTest.to_csv('input/logmel_labelsTest.csv', index=False)
+np.save("input/logmelTestFeatures.npy", np.array(logmelTestDF['values'].tolist()))

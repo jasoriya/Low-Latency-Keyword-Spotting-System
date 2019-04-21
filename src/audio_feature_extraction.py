@@ -101,18 +101,7 @@ for i, x in enumerate(subFolderList):
     for file in all_files:
         mfccF = wav2mfcc(file, max_pad_len=44)
         mfccTest[file] = mfccF
-        
-
     
-#mfccTestFeatures = dict_to_array(mfccTest, extract='v')
-#mfccTrainFeatures = dict_to_array(mfccTrain, extract='v')
-#np.save("mfccTrainFeatures.npy", mfccTrainFeatures)
-#np.save("mfccTestFeatures.npy", mfccTestFeatures)
-#
-#mfccTestFiles = dict_to_array(mfccTest, extract='k')
-#mfccTrainFiles = dict_to_array(mfccTrain, extract='k')
-#np.save("mfccTrainFiles.npy", mfccTrainFiles)
-#np.save("mfccTestFiles.npy", mfccTestFiles)
 
 #Train Labels
 labelList = ['yes', 'no', 'up', 'down', 'left', 'right', 'on', 'off', 'stop', 'go', '_background_noise_']
@@ -132,8 +121,8 @@ mfccTrainDF = pd.DataFrame(list(mfccTrain.items()), columns=['fileName', 'values
 mfccTrainDF.sort_values(['fileName'], inplace=True)
 mfccTrainDF.reset_index(drop=True, inplace=True)
 labelsTrain['fileName'] = mfccTrainDF['fileName']
-labelsTrain.to_csv('mfcc_labelsTrain.csv', index=False)
-np.save("mfccTrainFeatures.npy", np.array(mfccTrainDF['values'].tolist()))
+labelsTrain.to_csv('input/mfcc_labelsTrain.csv', index=False)
+np.save("input/mfccTrainFeatures.npy", np.array(mfccTrainDF['values'].tolist()))
 
 #Test Labels
 
@@ -147,5 +136,5 @@ mfccTestDF = pd.DataFrame(list(mfccTest.items()), columns=['fileName', 'values']
 mfccTestDF.sort_values(['fileName'], inplace=True)
 mfccTestDF.reset_index(drop=True, inplace=True)
 labelsTest['fileName'] = mfccTestDF['fileName']
-labelsTest.to_csv('mfcc_labelsTest.csv', index=False)
-np.save("mfccTestFeatures.npy", np.array(mfccTestDF['values'].tolist()))
+labelsTest.to_csv('input/mfcc_labelsTest.csv', index=False)
+np.save("input/mfccTestFeatures.npy", np.array(mfccTestDF['values'].tolist()))
