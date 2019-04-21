@@ -21,10 +21,10 @@ from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D, Separabl
 import keras
 
 def getData():
-    trainF = np.load('input/mfccTrainFeatures.npy').reshape(-1,32,26,1)
-    testF = np.load('input/mfccTestFeatures.npy').reshape(-1,32,26,1)
-    trainLabels = pd.read_csv('input/mfcc_labelsTrain.csv')
-    testLabels = pd.read_csv('input/mfcc_labelsTest.csv')
+    trainF = np.load('input/logmelTrainFeatures.npy').reshape(-1,32,26,1)
+    testF = np.load('input/logmelTestFeatures.npy').reshape(-1,32,26,1)
+    trainLabels = pd.read_csv('input/logmel_labelsTrain.csv')
+    testLabels = pd.read_csv('input/logmel_labelsTest.csv')
 
     trainL = trainLabels.values[:, 1:]
 
