@@ -61,12 +61,18 @@ if __name__=="__main__":
                   metrics=['accuracy'])
     history = History()
 
+#    callbacks = [history,
+#             ModelCheckpoint(filepath='weights/weights_dscnn.best.hdf5',
+#             monitor='val_acc', verbose=1,
+#             save_best_only=True, mode='auto')]
     callbacks = [history,
-             ModelCheckpoint(filepath='weights/weights_dscnn.best.hdf5',
-             monitor='val_acc', verbose=1,
-             save_best_only=True, mode='auto')]
+             EarlyStopping(monitor='val_loss', patience=20, verbose=1, min_delta=1e-4),
+             ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, cooldown=0, min_lr=1e-7, verbose=1),
+             ModelCheckpoint(filepath='weights/weights_logmel_dscnn.best.hdf5',
+             monitor='val_loss', verbose=1,
+             save_best_only=True, save_weights_only=True, mode='auto')]
 
     history = model.fit(trainF, trainL, batch_size=100, epochs=200, verbose=1, validation_data=(valF, valL), callbacks=callbacks)
 
-#    model.load_weights('../weights/weights_299_ir.best.hdf5')
+#    model.load_weights('weights/weights_logmel_dscnn.best.hdf5')
     print("The accuracy of ds-cnn is:", model.evaluate(testF, testL))
